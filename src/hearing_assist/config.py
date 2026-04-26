@@ -18,6 +18,10 @@ class AppConfig:
     backend: STTBackend = "vosk"
     replay_on_stop: bool = False
     whisper_cli_path: str = "whisper-cli"
+    speak_final: bool = False
+    tts_voice: str | None = None
+    tts_rate: int = 0
+    tts_volume: int = 100
 
     @property
     def buffer_samples(self) -> int:

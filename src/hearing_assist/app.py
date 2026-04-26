@@ -17,6 +17,7 @@ from .config import AppConfig
 from .stt_base import Recognizer
 from .stt_vosk import VoskRecognizer
 from .stt_whisper_cpp import WhisperCppRecognizer
+from .tts import TextSpeaker
 
 
 def parse_args() -> AppConfig:
@@ -49,6 +50,19 @@ def parse_args() -> AppConfig:
         default="whisper-cli",
         help="whisper.cpp CLI実行ファイル名またはパス",
     )
+    parser.add_argument(
+        "--speak-final",
+        action="store_true",
+        help="確定字幕をOSの別音声で読み上げる",
+    )
+    parser.add_argument(
+        "--tts-voice",
+        type=str,
+        default=None,
+        help="読み上げに使うWindows音声名。例: Microsoft Haruka Desktop",
+    )
+    parser.add_argument("--tts-rate", type=int, default=0, help="読み上げ速度 -10..10")
+    parser.add_argument("--tts-volume", type=int, default=100, help="読み上げ音量 0..100")
 
     args = parser.parse_args()
     return AppConfig(
@@ -60,6 +74,10 @@ def parse_args() -> AppConfig:
         transcript_path=args.transcript_path,
         replay_on_stop=args.replay_on_stop,
         whisper_cli_path=args.whisper_cli_path,
+        speak_final=args.speak_final,
+        tts_voice=args.tts_voice,
+        tts_rate=args.tts_rate,
+        tts_volume=args.tts_volume,
     )
 
 
@@ -93,13 +111,26 @@ def run(config: AppConfig) -> int:
     )
     ring = RingBuffer(config.buffer_samples)
     enhancer = VoiceEnhancer(config.sample_rate)
+    speaker = (
+        TextSpeaker(
+            voice=config.tts_voice,
+            rate=config.tts_rate,
+            volume=config.tts_volume,
+        )
+        if config.speak_final
+        else None
+    )
 
     print(f"開始: Ctrl+C で停止。backend={config.backend}", flush=True)
     print(f"字幕は {config.transcript_path} に保存されます。", flush=True)
+    if speaker is not None:
+        print("確定字幕を読み上げます。", flush=True)
 
     try:
         mic.start()
     except AudioInputError as exc:
+        if speaker is not None:
+            speaker.close()
         print(str(exc), file=sys.stderr)
         return 2
 
@@ -121,6 +152,8 @@ def run(config: AppConfig) -> int:
                 if result.is_final:
                     fp.write(result.text + "\n")
                     fp.flush()
+                    if speaker is not None:
+                        speaker.speak(result.text)
         except KeyboardInterrupt:
             print("\n停止します。", flush=True)
         finally:
@@ -129,6 +162,11 @@ def run(config: AppConfig) -> int:
     tail = recognizer.flush()
     if tail is not None:
         print(f"[FINAL] {tail.text}")
+        if speaker is not None:
+            speaker.speak(tail.text)
+
+    if speaker is not None:
+        speaker.close()
 
     if config.replay_on_stop:
         print("直前バッファを再生します。", flush=True)

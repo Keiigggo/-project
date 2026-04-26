@@ -60,6 +60,17 @@ hearing-assist \
   --replay-on-stop
 ```
 
+### 確定字幕を別音声で読み上げる
+Windows の音声合成を使って、認識された確定字幕を読み上げます。
+
+```bash
+hearing-assist \
+  --backend vosk \
+  --model-path models/vosk-model-small-ja-0.22 \
+  --speak-final \
+  --tts-voice "Microsoft Haruka Desktop"
+```
+
 ## まだ未実装（次ステップ）
 - 常時UI（モバイル/デスクトップ）
 - 辞書補正（駅名・人名など）
