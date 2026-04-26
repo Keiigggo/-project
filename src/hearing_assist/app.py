@@ -6,7 +6,13 @@ from pathlib import Path
 
 import numpy as np
 
-from .audio import AudioInputError, MicrophoneStream, RingBuffer, replay_pcm16
+from .audio import (
+    AudioInputError,
+    MicrophoneStream,
+    RingBuffer,
+    VoiceEnhancer,
+    replay_pcm16,
+)
 from .config import AppConfig
 from .stt_base import Recognizer
 from .stt_vosk import VoskRecognizer
@@ -86,6 +92,7 @@ def run(config: AppConfig) -> int:
         channels=config.channels,
     )
     ring = RingBuffer(config.buffer_samples)
+    enhancer = VoiceEnhancer(config.sample_rate)
 
     print(f"開始: Ctrl+C で停止。backend={config.backend}", flush=True)
     print(f"字幕は {config.transcript_path} に保存されます。", flush=True)
@@ -101,7 +108,8 @@ def run(config: AppConfig) -> int:
             while True:
                 chunk = mic.read(timeout=1.0)
                 samples = np.frombuffer(chunk.pcm16, dtype=np.int16)
-                ring.append(samples)
+                enhanced_samples = enhancer.process(samples)
+                ring.append(enhanced_samples)
 
                 result = recognizer.accept_audio(chunk.pcm16)
                 if result is None:
