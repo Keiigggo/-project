@@ -1,0 +1,32 @@
+[project]
+name = "hearing-assist"
+version = "0.1.0"
+description = "Offline-first hearing assist prototype for Japanese speech transcription"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26",
+  "sounddevice>=0.4.7",
+  "vosk>=0.3.45",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+]
+
+[project.scripts]
+hearing-assist = "hearing_assist.app:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
